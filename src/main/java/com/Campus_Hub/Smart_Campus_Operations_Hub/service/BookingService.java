@@ -16,9 +16,11 @@ public interface BookingService {
     
     BookingResponseDTO rejectBooking(Long bookingId, BookingActionDTO actionDTO, String adminEmail);
     
-    BookingResponseDTO cancelBooking(Long bookingId, String userEmail);
+    BookingResponseDTO cancelBooking(Long bookingId, BookingActionDTO actionDTO, String userEmail);
     
     List<BookingResponseDTO> getUserBookings(Long userId);
+
+    List<BookingResponseDTO> getUserBookingsByEmail(String userEmail);
     
     List<BookingResponseDTO> getAllBookings(String adminEmail, Long userId, Long resourceId, 
                                            BookingStatus status, LocalDateTime startDate, 

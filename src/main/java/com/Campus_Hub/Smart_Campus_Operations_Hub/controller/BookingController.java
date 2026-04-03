@@ -44,7 +44,14 @@ public class BookingController {
      */
     @GetMapping("/my")
     public ResponseEntity<List<BookingResponseDTO>> getMyBookings(
-            @RequestParam Long userId) {
+            @RequestParam(required = false) Long userId,
+            @RequestHeader(value = "X-User-Email", defaultValue = "user@campus.com") String userEmail) {
+        // Prefer email-based lookup to ensure the caller sees only their bookings.
+        // Keep userId param for backward compatibility.
+        if (userEmail != null && !userEmail.isBlank()) {
+            return ResponseEntity.ok(bookingService.getUserBookingsByEmail(userEmail));
+        }
+
         return ResponseEntity.ok(bookingService.getUserBookings(userId));
     }
 
@@ -98,8 +105,12 @@ public class BookingController {
     @PutMapping("/{id}/cancel")
     public ResponseEntity<BookingResponseDTO> cancelBooking(
             @PathVariable Long id,
-            @RequestHeader("X-User-Email") String userEmail) {
-        return ResponseEntity.ok(bookingService.cancelBooking(id, userEmail));
+            @RequestBody(required = false) BookingActionDTO actionDTO,
+            @RequestHeader(value = "X-User-Email", defaultValue = "user@campus.com") String userEmail) {
+        if (actionDTO == null) {
+            actionDTO = new BookingActionDTO();
+        }
+        return ResponseEntity.ok(bookingService.cancelBooking(id, actionDTO, userEmail));
     }
 
     /**

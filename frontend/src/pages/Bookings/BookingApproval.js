@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiCheck, FiClock, FiMoreHorizontal, FiX } from 'react-icons/fi';
+import { FiCheck, FiClock, FiX } from 'react-icons/fi';
 import { bookingApi } from '../../api/bookingApi';
 import BookingStatusBadge from './BookingStatusBadge';
 import Modal from '../../components/common/Modal';
@@ -145,13 +145,13 @@ const BookingApproval = () => {
                   <FiX /> Reject
                 </button>
                 <button
-                  className="request-more-btn"
+                  className="action-pill action-pill-detail"
                   type="button"
                   onClick={() => handleDetails(booking)}
                   aria-label="Details"
                   title={`Request #REQ-${2000 + booking.id}`}
                 >
-                  <FiMoreHorizontal />
+                  Detail
                 </button>
               </div>
             </article>

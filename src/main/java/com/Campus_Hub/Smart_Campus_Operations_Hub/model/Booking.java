@@ -49,6 +49,8 @@ public class Booking {
     private String rejectionReason;
     
     private String approvalReason;
+
+    private String cancelReason;
     
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

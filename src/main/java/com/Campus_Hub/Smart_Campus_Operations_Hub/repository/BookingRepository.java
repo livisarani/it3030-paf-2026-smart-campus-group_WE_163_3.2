@@ -14,6 +14,8 @@ import java.util.List;
 public interface BookingRepository extends JpaRepository<Booking, Long> {
     
     List<Booking> findByUserId(Long userId);
+
+       List<Booking> findByUserEmail(String userEmail);
     
     @Query("SELECT b FROM Booking b WHERE b.resourceId = :resourceId " +
            "AND b.status IN ('APPROVED', 'PENDING') " +

@@ -105,7 +105,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public BookingResponseDTO cancelBooking(Long bookingId, String userEmail) {
+    public BookingResponseDTO cancelBooking(Long bookingId, BookingActionDTO actionDTO, String userEmail) {
         Booking booking = getBooking(bookingId);
         
         // Check if user owns the booking or is admin
@@ -121,6 +121,7 @@ public class BookingServiceImpl implements BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
+        booking.setCancelReason(actionDTO != null ? actionDTO.getReason() : null);
         
         return convertToDTO(bookingRepository.save(booking));
     }
@@ -128,6 +129,13 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public List<BookingResponseDTO> getUserBookings(Long userId) {
         return bookingRepository.findByUserId(userId).stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<BookingResponseDTO> getUserBookingsByEmail(String userEmail) {
+        return bookingRepository.findByUserEmail(userEmail).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
@@ -175,6 +183,7 @@ public class BookingServiceImpl implements BookingService {
         dto.setStatus(booking.getStatus());
         dto.setRejectionReason(booking.getRejectionReason());
         dto.setApprovalReason(booking.getApprovalReason());
+        dto.setCancelReason(booking.getCancelReason());
         dto.setCreatedAt(booking.getCreatedAt());
         dto.setUpdatedAt(booking.getUpdatedAt());
         return dto;

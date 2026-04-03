@@ -20,6 +20,7 @@ public class BookingResponseDTO {
     private BookingStatus status;
     private String rejectionReason;
     private String approvalReason;
+    private String cancelReason;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

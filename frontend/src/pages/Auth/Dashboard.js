@@ -38,10 +38,19 @@ const Dashboard = () => {
 	const pendingTrend = stats.total ? Math.round((stats.pending / stats.total) * 100) : 0;
 	const approvedTrend = stats.total ? Math.round((stats.approved / stats.total) * 100) : 0;
 
-	const recentBookings = useMemo(() => {
-		return [...bookings]
-			.sort((a, b) => new Date(b.startTime) - new Date(a.startTime))
-			.slice(0, 8);
+	const recentRequests = useMemo(() => {
+		const toTime = (value) => (value ? new Date(value).getTime() : 0);
+
+		return bookings
+			.filter((booking) => booking.status === 'PENDING')
+			.slice()
+			.sort(
+				(a, b) =>
+					toTime(b.updatedAt) - toTime(a.updatedAt) ||
+					toTime(b.createdAt) - toTime(a.createdAt) ||
+					toTime(b.startTime) - toTime(a.startTime)
+			)
+			.slice(0, 5);
 	}, [bookings]);
 
 	const formatDate = (dateString) =>
@@ -131,7 +140,7 @@ const Dashboard = () => {
 						</tr>
 					</thead>
 					<tbody>
-						{recentBookings.map((booking) => (
+						{recentRequests.map((booking) => (
 							<tr key={booking.id}>
 								<td>{booking.userName || 'Campus User'}</td>
 								<td>

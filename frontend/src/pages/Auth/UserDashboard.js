@@ -36,7 +36,7 @@ const UserDashboard = () => {
 
     const recentBookings = [...bookings]
       .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
-      .slice(0, 6);
+      .slice(0, 5);
 
     return {
       total,
@@ -93,7 +93,6 @@ const UserDashboard = () => {
         <article className="user-analytics-card user-kpi-card">
           <div className="kpi-icon kpi-icon-overall"><FiClipboard /></div>
           <div className="kpi-body">
-            <div className="kpi-pill kpi-pill-overall">Overall</div>
             <h3>{analytics.total}</h3>
             <p>Total Bookings</p>
           </div>
@@ -102,7 +101,6 @@ const UserDashboard = () => {
         <article className="user-analytics-card user-kpi-card">
           <div className="kpi-icon kpi-icon-action"><FiClock /></div>
           <div className="kpi-body">
-            <div className="kpi-pill kpi-pill-action">Action Needed</div>
             <h3>{analytics.pending}</h3>
             <p>Pending Bookings</p>
           </div>
@@ -111,7 +109,6 @@ const UserDashboard = () => {
         <article className="user-analytics-card user-kpi-card">
           <div className="kpi-icon kpi-icon-completed"><FiCheckCircle /></div>
           <div className="kpi-body">
-            <div className="kpi-pill kpi-pill-completed">Completed</div>
             <h3>{analytics.approved}</h3>
             <p>Approved Bookings</p>
           </div>
@@ -120,7 +117,6 @@ const UserDashboard = () => {
         <article className="user-analytics-card user-kpi-card">
           <div className="kpi-icon kpi-icon-declined"><FiXCircle /></div>
           <div className="kpi-body">
-            <div className="kpi-pill kpi-pill-declined">Declined</div>
             <h3>{analytics.rejected}</h3>
             <p>Rejected Bookings</p>
           </div>

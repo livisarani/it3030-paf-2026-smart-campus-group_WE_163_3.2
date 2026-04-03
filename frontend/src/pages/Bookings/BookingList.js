@@ -6,6 +6,7 @@ import { bookingApi } from '../../api/bookingApi';
 import BookingStatusBadge from './BookingStatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorAlert from '../../components/common/ErrorAlert';
+import Pagination from '../../components/common/Pagination';
 
 const BookingList = () => {
   const [bookings, setBookings] = useState([]);
@@ -16,12 +17,22 @@ const BookingList = () => {
   const [rejectingBookingId, setRejectingBookingId] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [submitting, setSubmitting] = useState({ bookingId: null, action: null });
+  const [cancelingBookingId, setCancelingBookingId] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelSubmittingId, setCancelSubmittingId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const { isAdmin } = useAuth();
   const adminView = isAdmin();
+
+  const pageSize = 5;
 
   useEffect(() => {
     loadBookings();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
 
   const loadBookings = async () => {
     try {
@@ -42,14 +53,40 @@ const BookingList = () => {
     }
   };
 
-  const handleCancel = async (id) => {
-    if (window.confirm('Are you sure you want to cancel this booking?')) {
-      try {
-        await bookingApi.cancelBooking(id);
-        loadBookings();
-      } catch (err) {
-        setError('Failed to cancel booking');
-      }
+  const startCancel = (bookingId) => {
+    setCancelingBookingId(bookingId);
+    setCancelReason('');
+    setError(null);
+  };
+
+  const submitCancel = async (bookingId) => {
+    const trimmed = cancelReason.trim();
+    if (!trimmed) {
+      setError('Please provide a reason for cancellation');
+      return;
+    }
+
+    try {
+      setCancelSubmittingId(bookingId);
+      const updated = await bookingApi.cancelBooking(bookingId, trimmed);
+      setBookings((prev) =>
+        prev.map((item) =>
+          item.id === bookingId
+            ? {
+                ...item,
+                ...(updated || {}),
+                status: (updated && updated.status) || 'CANCELLED',
+                cancelReason: (updated && updated.cancelReason) || trimmed,
+              }
+            : item
+        )
+      );
+      setCancelingBookingId(null);
+      setCancelReason('');
+    } catch (err) {
+      setError(typeof err === 'string' ? err : err?.message || 'Failed to cancel booking');
+    } finally {
+      setCancelSubmittingId(null);
     }
   };
 
@@ -117,6 +154,18 @@ const BookingList = () => {
     });
   }, [bookings, searchTerm, statusFilter]);
 
+  const totalEntries = filteredBookings.length;
+  const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalEntries);
+  const paginatedBookings = useMemo(() => {
+    return filteredBookings.slice(startIndex, endIndex);
+  }, [filteredBookings, startIndex, endIndex]);
+
+  const showingStart = totalEntries === 0 ? 0 : startIndex + 1;
+  const showingEnd = totalEntries === 0 ? 0 : endIndex;
+
   const formatDate = (dateString) =>
     new Date(dateString).toLocaleDateString(undefined, {
       month: 'short',
@@ -131,7 +180,6 @@ const BookingList = () => {
     });
 
   if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorAlert message={error} />;
 
   return (
     <div className="booking-page">
@@ -146,6 +194,8 @@ const BookingList = () => {
           </Link>
         )}
       </div>
+
+      {error ? <ErrorAlert message={error} /> : null}
 
       <section className="booking-table-card">
         <div className="booking-toolbar">
@@ -174,20 +224,21 @@ const BookingList = () => {
         {filteredBookings.length === 0 ? (
           <p className="no-data">No bookings found.</p>
         ) : (
-          <table className="bookings-table">
-            <thead>
-              <tr>
-                <th>Booking ID</th>
-                <th>Requested By</th>
-                <th>Room</th>
-                <th>Date & Time</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredBookings.map((booking) => (
-                <tr key={booking.id}>
+          <>
+            <table className="bookings-table">
+              <thead>
+                <tr>
+                  <th>Booking ID</th>
+                  <th>Requested By</th>
+                  <th>Room</th>
+                  <th>Date & Time</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedBookings.map((booking) => (
+                  <tr key={booking.id}>
                   <td className="booking-id">BK-{booking.id}</td>
                   <td>{booking.userName || 'Campus User'}</td>
                   <td>{booking.resourceName}</td>
@@ -245,30 +296,66 @@ const BookingList = () => {
                         </div>
                       ) : null
                     ) : (
-                      <div className="action-buttons">
-                        <Link
-                          to={`/bookings/${booking.id}`}
-                          state={{ booking }}
-                          className="btn-detail-small"
-                        >
-                          Detail
-                        </Link>
-                        {booking.status === 'APPROVED' ? (
-                          <button
-                            type="button"
-                            className="btn-cancel-small"
-                            onClick={() => handleCancel(booking.id)}
+                      <div className="user-action-cell">
+                        <div className="action-buttons">
+                          <Link
+                            to={`/bookings/${booking.id}`}
+                            state={{ booking }}
+                            className="action-pill action-pill-detail"
                           >
-                            Cancel
-                          </button>
+                            Detail
+                          </Link>
+
+                            {booking.status === 'PENDING' ? (
+                            <button
+                              type="button"
+                              className="action-pill action-pill-cancel"
+                              onClick={() =>
+                                cancelingBookingId === booking.id
+                                  ? submitCancel(booking.id)
+                                  : startCancel(booking.id)
+                              }
+                              disabled={cancelSubmittingId === booking.id}
+                            >
+                              {cancelingBookingId === booking.id ? 'Canceling...' : 'Cancel'}
+                            </button>
+                          ) : null}
+                        </div>
+
+                          {booking.status === 'PENDING' && cancelingBookingId === booking.id ? (
+                          <input
+                            className="cancel-reason-input"
+                            type="text"
+                            value={cancelReason}
+                            onChange={(e) => setCancelReason(e.target.value)}
+                            placeholder="Reason for cancel..."
+                            disabled={cancelSubmittingId === booking.id}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                submitCancel(booking.id);
+                              }
+                            }}
+                          />
                         ) : null}
                       </div>
                     )}
                   </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="booking-table-footer">
+              <div className="booking-entries">
+                Showing {showingStart} to {showingEnd} of {totalEntries} entries
+              </div>
+              <Pagination
+                currentPage={safeCurrentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          </>
         )}
       </section>
     </div>

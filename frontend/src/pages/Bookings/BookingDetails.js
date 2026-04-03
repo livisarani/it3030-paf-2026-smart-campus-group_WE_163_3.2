@@ -93,10 +93,24 @@ const BookingDetails = () => {
 	const handleCancel = async () => {
 		if (!booking || booking.status !== 'APPROVED') return;
 		if (!window.confirm('Are you sure you want to cancel this booking?')) return;
+		const reason = window.prompt('Why are you cancelling this booking?');
+		if (reason === null) {
+			return;
+		}
+
+		const trimmed = (reason || '').trim();
 
 		try {
-			await bookingApi.cancelBooking(booking.id);
-			navigate('/bookings');
+			const updated = await bookingApi.cancelBooking(booking.id, trimmed);
+			setBooking((prev) => {
+				if (!prev) return prev;
+				return {
+					...prev,
+					...(updated || {}),
+					status: (updated && updated.status) || 'CANCELLED',
+					cancelReason: (updated && updated.cancelReason) || trimmed,
+				};
+			});
 		} catch (err) {
 			setError(err?.message || 'Failed to cancel booking');
 		}

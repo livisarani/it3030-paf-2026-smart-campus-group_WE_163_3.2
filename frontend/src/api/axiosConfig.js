@@ -33,9 +33,15 @@ api.interceptors.response.use(
   (response) => response.data,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('userEmail');
-      localStorage.removeItem('userName');
-      window.location.href = '/login';
+      const requestUrl = (error.config?.url || '').toString();
+
+      // Do not force navigation to login for action endpoints like cancel.
+      // Let the UI surface the error and keep the user on the same page.
+      if (!requestUrl.includes('/cancel')) {
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('userName');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error.response?.data || error.message);
   }
