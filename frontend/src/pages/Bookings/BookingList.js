@@ -1,38 +1,31 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { FiCheck, FiX } from 'react-icons/fi';
+import { FiCheck, FiClock, FiX } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { bookingApi } from '../../api/bookingApi';
 import BookingStatusBadge from './BookingStatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorAlert from '../../components/common/ErrorAlert';
-import Pagination from '../../components/common/Pagination';
+import Modal from '../../components/common/Modal';
 
 const BookingList = () => {
   const [bookings, setBookings] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [activeTab, setActiveTab] = useState('ALL');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [rejectingBookingId, setRejectingBookingId] = useState(null);
-  const [rejectionReason, setRejectionReason] = useState('');
   const [submitting, setSubmitting] = useState({ bookingId: null, action: null });
   const [cancelingBookingId, setCancelingBookingId] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelSubmittingId, setCancelSubmittingId] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [showRejectModal, setShowRejectModal] = useState(false);
   const { isAdmin } = useAuth();
   const adminView = isAdmin();
-
-  const pageSize = 5;
 
   useEffect(() => {
     loadBookings();
   }, []);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter]);
 
   const loadBookings = async () => {
     try {
@@ -93,8 +86,6 @@ const BookingList = () => {
   const handleAdminApprove = async (booking) => {
     try {
       setSubmitting({ bookingId: booking.id, action: 'approve' });
-      setRejectingBookingId(null);
-      setRejectionReason('');
       await bookingApi.approveBooking(booking.id, '');
       await loadBookings();
     } catch (err) {
@@ -104,24 +95,27 @@ const BookingList = () => {
     }
   };
 
-  const handleAdminRejectStart = (booking) => {
-    setRejectingBookingId(booking.id);
-    setRejectionReason('');
+  const startReject = (booking) => {
+    setSelectedBooking(booking);
+    setRejectReason('');
+    setShowRejectModal(true);
     setError(null);
   };
 
-  const handleAdminRejectSubmit = async (booking) => {
-    const trimmedReason = rejectionReason.trim();
+  const submitReject = async () => {
+    const trimmedReason = rejectReason.trim();
+    if (!selectedBooking) return;
     if (!trimmedReason) {
       setError('Please provide a reason for rejection');
       return;
     }
 
     try {
-      setSubmitting({ bookingId: booking.id, action: 'reject' });
-      await bookingApi.rejectBooking(booking.id, trimmedReason);
-      setRejectingBookingId(null);
-      setRejectionReason('');
+      setSubmitting({ bookingId: selectedBooking.id, action: 'reject' });
+      await bookingApi.rejectBooking(selectedBooking.id, trimmedReason);
+      setShowRejectModal(false);
+      setSelectedBooking(null);
+      setRejectReason('');
       await loadBookings();
     } catch (err) {
       setError('Failed to reject booking');
@@ -131,40 +125,15 @@ const BookingList = () => {
   };
 
   const filteredBookings = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
+    if (activeTab === 'ALL') return bookings;
+    return bookings.filter((b) => b.status === activeTab);
+  }, [bookings, activeTab]);
 
-    return bookings.filter((booking) => {
-      const matchesStatus = statusFilter === 'ALL' || booking.status === statusFilter;
-
-      if (!query) {
-        return matchesStatus;
-      }
-
-      const searchableText = [
-        booking.id,
-        booking.userName,
-        booking.resourceName,
-        booking.purpose,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-
-      return matchesStatus && searchableText.includes(query);
+  const formatTime = (dateString) =>
+    new Date(dateString).toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
     });
-  }, [bookings, searchTerm, statusFilter]);
-
-  const totalEntries = filteredBookings.length;
-  const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
-  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
-  const startIndex = (safeCurrentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, totalEntries);
-  const paginatedBookings = useMemo(() => {
-    return filteredBookings.slice(startIndex, endIndex);
-  }, [filteredBookings, startIndex, endIndex]);
-
-  const showingStart = totalEntries === 0 ? 0 : startIndex + 1;
-  const showingEnd = totalEntries === 0 ? 0 : endIndex;
 
   const formatDate = (dateString) =>
     new Date(dateString).toLocaleDateString(undefined, {
@@ -173,20 +142,14 @@ const BookingList = () => {
       year: 'numeric',
     });
 
-  const formatTime = (dateString) =>
-    new Date(dateString).toLocaleTimeString(undefined, {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-
   if (loading) return <LoadingSpinner />;
 
   return (
     <div className="booking-page">
       <div className="booking-page-header">
         <div>
-          <h1>{adminView ? 'All Bookings' : 'My Bookings'}</h1>
-          <p>Manage and view campus room bookings.</p>
+          <h1>{adminView ? 'Bookings' : 'My Bookings'}</h1>
+          <p>Manage your scheduled spaces, review approval statuses, and coordinate campus resource utilization.</p>
         </div>
         {!adminView && (
           <Link to="/bookings/new" className="new-booking-btn">
@@ -195,169 +158,205 @@ const BookingList = () => {
         )}
       </div>
 
+      <div className="booking-tabs booking-tabs-grid" role="tablist" aria-label="Bookings">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'ALL'}
+          className={`booking-tab ${activeTab === 'ALL' ? 'active' : ''}`}
+          onClick={() => setActiveTab('ALL')}
+        >
+          All Bookings
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'PENDING'}
+          className={`booking-tab ${activeTab === 'PENDING' ? 'active' : ''}`}
+          onClick={() => setActiveTab('PENDING')}
+        >
+          Pending
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'APPROVED'}
+          className={`booking-tab ${activeTab === 'APPROVED' ? 'active' : ''}`}
+          onClick={() => setActiveTab('APPROVED')}
+        >
+          Approved
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'REJECTED'}
+          className={`booking-tab ${activeTab === 'REJECTED' ? 'active' : ''}`}
+          onClick={() => setActiveTab('REJECTED')}
+        >
+          Rejected
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'CANCELLED'}
+          className={`booking-tab ${activeTab === 'CANCELLED' ? 'active' : ''}`}
+          onClick={() => setActiveTab('CANCELLED')}
+        >
+          Cancelled
+        </button>
+      </div>
+
       {error ? <ErrorAlert message={error} /> : null}
 
-      <section className="booking-table-card">
-        <div className="booking-toolbar">
-          <div className="booking-search">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search bookings by ID, User, or Room..."
+      {filteredBookings.length === 0 ? (
+        <p className="no-data">No bookings found.</p>
+      ) : (
+        <section className="queue-list">
+          {filteredBookings.map((booking) => (
+            <article key={booking.id} className="queue-row">
+              <div className="queue-card-header">
+                <div className="queue-user">
+                  <div className="queue-avatar" aria-hidden="true">
+                    {(booking.resourceName || 'R')
+                      .split(' ')
+                      .filter(Boolean)
+                      .slice(0, 1)
+                      .map((p) => p[0]?.toUpperCase())
+                      .join('')}
+                  </div>
+                  <div className="queue-user-meta">
+                    <p className="queue-user-name">{booking.resourceName || 'Campus Space'}</p>
+                  </div>
+                </div>
+
+                <div className="queue-status">
+                  <BookingStatusBadge status={booking.status} />
+                </div>
+              </div>
+
+              <div className="queue-details">
+                <div className="queue-details-card queue-details-simple">
+                  <div className="queue-detail-line">
+                    <span className="queue-detail-key">Time</span>
+                    <span className="queue-detail-sep">-</span>
+                    <span className="queue-detail-val">
+                      <FiClock className="queue-detail-icon" aria-hidden="true" />
+                      {formatDate(booking.startTime)} · {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
+                    </span>
+                  </div>
+
+                  <div className="queue-detail-line">
+                    <span className="queue-detail-key">Location</span>
+                    <span className="queue-detail-sep">-</span>
+                    <span className="queue-detail-val">{booking.resourceName || '—'}</span>
+                  </div>
+
+                    {adminView ? (
+                      <div className="queue-detail-line">
+                        <span className="queue-detail-key">Booked By</span>
+                        <span className="queue-detail-sep">-</span>
+                        <span className="queue-detail-val">{booking.userName || booking.userEmail || '—'}</span>
+                      </div>
+                    ) : null}
+
+                  <div className="queue-detail-line">
+                    <span className="queue-detail-key">Purpose</span>
+                    <span className="queue-detail-sep">-</span>
+                    <span className="queue-detail-val">{booking.purpose || '—'}</span>
+                  </div>
+
+                  {!adminView && booking.status === 'PENDING' && cancelingBookingId === booking.id ? (
+                    <input
+                      className="cancel-reason-input"
+                      type="text"
+                      value={cancelReason}
+                      onChange={(e) => setCancelReason(e.target.value)}
+                      placeholder="Reason for cancel..."
+                      disabled={cancelSubmittingId === booking.id}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          submitCancel(booking.id);
+                        }
+                      }}
+                    />
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="queue-card-footer">
+                <div className="queue-footer-right">
+                  <Link to={`/bookings/${booking.id}`} state={{ booking }} className="action-pill action-pill-detail">
+                    Detail
+                  </Link>
+
+                  {adminView && booking.status === 'PENDING' ? (
+                    <>
+                      <button
+                        type="button"
+                        className="action-pill action-pill-approve"
+                        onClick={() => handleAdminApprove(booking)}
+                        disabled={submitting.bookingId === booking.id}
+                      >
+                        <FiCheck /> Accept
+                      </button>
+                      <button
+                        type="button"
+                        className="action-pill action-pill-reject"
+                        onClick={() => startReject(booking)}
+                        disabled={submitting.bookingId === booking.id}
+                      >
+                        <FiX /> Reject
+                      </button>
+                    </>
+                  ) : null}
+
+                  {!adminView && booking.status === 'PENDING' ? (
+                    <button
+                      type="button"
+                      className="action-pill action-pill-cancel"
+                      onClick={() =>
+                        cancelingBookingId === booking.id ? submitCancel(booking.id) : startCancel(booking.id)
+                      }
+                      disabled={cancelSubmittingId === booking.id}
+                    >
+                      {cancelSubmittingId === booking.id ? 'Canceling...' : 'Cancel'}
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
+
+      <Modal
+        isOpen={showRejectModal}
+        onClose={() => setShowRejectModal(false)}
+        title="Reject Booking"
+      >
+        <div className="modal-form">
+          <p>
+            Provide a reason to reject booking for <strong>{selectedBooking?.resourceName}</strong>.
+          </p>
+          <div className="form-group">
+            <label>Reason</label>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Reason for rejection..."
+              rows="3"
             />
           </div>
-
-          <select
-            className="booking-filter"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="PENDING">Pending</option>
-            <option value="APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
-            <option value="CANCELLED">Cancelled</option>
-          </select>
+          <div className="modal-actions">
+            <button className="btn-cancel" onClick={() => setShowRejectModal(false)}>
+              Cancel
+            </button>
+            <button className="btn-reject" onClick={submitReject}>
+              Confirm Reject
+            </button>
+          </div>
         </div>
-
-        {filteredBookings.length === 0 ? (
-          <p className="no-data">No bookings found.</p>
-        ) : (
-          <>
-            <table className="bookings-table">
-              <thead>
-                <tr>
-                  <th>Booking ID</th>
-                  <th>Requested By</th>
-                  <th>Room</th>
-                  <th>Date & Time</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedBookings.map((booking) => (
-                  <tr key={booking.id}>
-                  <td className="booking-id">BK-{booking.id}</td>
-                  <td>{booking.userName || 'Campus User'}</td>
-                  <td>{booking.resourceName}</td>
-                  <td>
-                    <div className="booking-date">{formatDate(booking.startTime)}</div>
-                    <small>
-                      {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
-                    </small>
-                  </td>
-                  <td>
-                    <BookingStatusBadge status={booking.status} />
-                  </td>
-                  <td>
-                    {adminView ? (
-                      booking.status === 'PENDING' ? (
-                        <div className="admin-action-cell">
-                          <div className="action-buttons">
-                            <button
-                              type="button"
-                              className="btn-approve-small"
-                              onClick={() => handleAdminApprove(booking)}
-                              disabled={submitting.bookingId === booking.id}
-                            >
-                              <FiCheck /> Accept
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-reject-small"
-                              onClick={() =>
-                                rejectingBookingId === booking.id
-                                  ? handleAdminRejectSubmit(booking)
-                                  : handleAdminRejectStart(booking)
-                              }
-                              disabled={submitting.bookingId === booking.id}
-                            >
-                              <FiX /> {rejectingBookingId === booking.id ? 'Rejecting...' : 'Reject'}
-                            </button>
-                          </div>
-
-                          {rejectingBookingId === booking.id ? (
-                            <input
-                              className="reject-reason-input"
-                              type="text"
-                              value={rejectionReason}
-                              onChange={(e) => setRejectionReason(e.target.value)}
-                              placeholder="Reason for rejection..."
-                              disabled={submitting.bookingId === booking.id}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  handleAdminRejectSubmit(booking);
-                                }
-                              }}
-                            />
-                          ) : null}
-                        </div>
-                      ) : null
-                    ) : (
-                      <div className="user-action-cell">
-                        <div className="action-buttons">
-                          <Link
-                            to={`/bookings/${booking.id}`}
-                            state={{ booking }}
-                            className="action-pill action-pill-detail"
-                          >
-                            Detail
-                          </Link>
-
-                            {booking.status === 'PENDING' ? (
-                            <button
-                              type="button"
-                              className="action-pill action-pill-cancel"
-                              onClick={() =>
-                                cancelingBookingId === booking.id
-                                  ? submitCancel(booking.id)
-                                  : startCancel(booking.id)
-                              }
-                              disabled={cancelSubmittingId === booking.id}
-                            >
-                              {cancelingBookingId === booking.id ? 'Canceling...' : 'Cancel'}
-                            </button>
-                          ) : null}
-                        </div>
-
-                          {booking.status === 'PENDING' && cancelingBookingId === booking.id ? (
-                          <input
-                            className="cancel-reason-input"
-                            type="text"
-                            value={cancelReason}
-                            onChange={(e) => setCancelReason(e.target.value)}
-                            placeholder="Reason for cancel..."
-                            disabled={cancelSubmittingId === booking.id}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                submitCancel(booking.id);
-                              }
-                            }}
-                          />
-                        ) : null}
-                      </div>
-                    )}
-                  </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div className="booking-table-footer">
-              <div className="booking-entries">
-                Showing {showingStart} to {showingEnd} of {totalEntries} entries
-              </div>
-              <Pagination
-                currentPage={safeCurrentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
-            </div>
-          </>
-        )}
-      </section>
+      </Modal>
     </div>
   );
 };

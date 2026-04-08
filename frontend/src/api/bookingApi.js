@@ -18,6 +18,9 @@ export const bookingApi = {
   
   // Cancel booking
   cancelBooking: (id, reason) => api.put(`/bookings/${id}/cancel`, { reason }),
+
+  // Delete booking request (Admin only; approved/rejected/cancelled only)
+  deleteBooking: (id) => api.delete(`/bookings/${id}`),
   
   // Get all bookings with filters (Admin only)
   getAllBookings: (filters) => {

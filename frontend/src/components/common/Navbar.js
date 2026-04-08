@@ -1,32 +1,43 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FiBell, FiUser } from 'react-icons/fi';
+import { FiBell, FiSearch, FiSettings, FiUser } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 
 const Navbar = () => {
-  const { user } = useAuth();
+  const { isAdmin } = useAuth();
+  const dashboardPath = isAdmin?.() ? '/admin/dashboard' : '/dashboard';
 
   return (
-    <nav className="navbar">
-      <div className="nav-brand">
-        <Link to="/" className="brand-link">
-          <span className="brand-badge">S</span>
-          <span>Smart Campus</span>
+    <header className="topbar">
+      <div className="topbar-left">
+        <Link to={dashboardPath} className="topbar-brand">
+          <span className="topbar-brand-mark" aria-hidden="true">
+            S
+          </span>
+          <span className="topbar-brand-text">
+            <span className="topbar-brand-title">Smart Campus</span>
+            <span className="topbar-brand-subtitle">SMART CAMPUS MANAGEMENT</span>
+          </span>
         </Link>
       </div>
 
-      <div className="navbar-right">
+      <div className="topbar-search" role="search">
+        <FiSearch aria-hidden="true" />
+        <input type="search" placeholder="Search resources..." aria-label="Search resources" />
+      </div>
+
+      <div className="topbar-right">
         <button type="button" className="icon-btn" aria-label="Notifications">
           <FiBell />
-          <span className="notification-dot" />
         </button>
-
-        <div className="nav-user">
+        <button type="button" className="icon-btn" aria-label="Settings">
+          <FiSettings />
+        </button>
+        <button type="button" className="icon-btn" aria-label="Account">
           <FiUser />
-          <span>{user?.name || 'Campus User'}</span>
-        </div>
+        </button>
       </div>
-    </nav>
+    </header>
   );
 };
 

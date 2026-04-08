@@ -127,6 +127,29 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    public void deleteBooking(Long bookingId, String adminEmail) {
+        validateAdmin(adminEmail);
+        Booking booking = getBooking(bookingId);
+
+        if (booking.getStatus() != BookingStatus.APPROVED
+                && booking.getStatus() != BookingStatus.REJECTED
+                && booking.getStatus() != BookingStatus.CANCELLED) {
+            throw new IllegalStateException(
+                    "Only approved, rejected, or cancelled bookings can be deleted. Current status: " + booking.getStatus());
+        }
+
+        if (booking.getStatus() == BookingStatus.APPROVED) {
+            LocalDateTime endTime = booking.getEndTime() != null ? booking.getEndTime() : booking.getStartTime();
+            if (endTime != null && !endTime.isBefore(LocalDateTime.now())) {
+                throw new IllegalStateException(
+                        "Approved bookings with future dates cannot be deleted. Only past approved bookings can be deleted.");
+            }
+        }
+
+        bookingRepository.delete(booking);
+    }
+
+    @Override
     public List<BookingResponseDTO> getUserBookings(Long userId) {
         return bookingRepository.findByUserId(userId).stream()
                 .map(this::convertToDTO)

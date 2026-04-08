@@ -93,111 +93,126 @@ const BookingForm = ({ onSuccess, onCancel }) => {
 
   return (
     <form className="booking-form" onSubmit={handleSubmit}>
-      <h2>Create New Booking</h2>
+      <div className="booking-form-header">
+        <h2>Create New Booking</h2>
+        <p>Reserve campus resources and schedule your next session.</p>
+      </div>
       
       {error && <div className="error-message">{error}</div>}
-      
-      <ConflictWarning 
-        hasConflict={conflict.hasConflict}
-        resourceName={conflict.resourceName}
-        startTime={formData.startTime}
-        endTime={formData.endTime}
-      />
 
-      <div className="form-group">
-        <label>Resource Name *</label>
-        <select
-          name="resourceName"
-          value={formData.resourceId}
-          onChange={handleResourceChange}
-          required
-        >
-          <option value="">Select a room</option>
-          {ROOMS.map((room) => (
-            <option key={room.id} value={room.id}>
-              {room.name} ({room.type})
-            </option>
-          ))}
-        </select>
-        {formData.resourceId && (
-          <small className="resource-id-hint">Room ID: {formData.resourceId}</small>
-        )}
-      </div>
+      <div className="booking-form-card">
+        <div className="booking-form-card-title">
+          <span className="booking-form-card-accent" aria-hidden="true" />
+          <h3>Reservation Details</h3>
+        </div>
 
-      <div className="form-row">
+        <ConflictWarning 
+          hasConflict={conflict.hasConflict}
+          resourceName={conflict.resourceName}
+          startTime={formData.startTime}
+          endTime={formData.endTime}
+        />
+
         <div className="form-group">
-          <label>Start Date & Time *</label>
-          <DatePicker
-            selected={formData.startTime}
-            onChange={(date) => handleDateChange(date, 'startTime')}
-            showTimeSelect
-            dateFormat="MMMM d, yyyy h:mm aa"
-            minDate={new Date()}
+          <label>Select Resource</label>
+          <select
+            name="resourceName"
+            value={formData.resourceId}
+            onChange={handleResourceChange}
             required
-          />
+          >
+            <option value="">Select a room</option>
+            {ROOMS.map((room) => (
+              <option key={room.id} value={room.id}>
+                {room.name} ({room.type})
+              </option>
+            ))}
+          </select>
+          {formData.resourceId && (
+            <small className="resource-id-hint">Room ID: {formData.resourceId}</small>
+          )}
+        </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label>Start Time</label>
+            <DatePicker
+              selected={formData.startTime}
+              onChange={(date) => handleDateChange(date, 'startTime')}
+              showTimeSelect
+              dateFormat="MMMM d, yyyy h:mm aa"
+              minDate={new Date()}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>End Time</label>
+            <DatePicker
+              selected={formData.endTime}
+              onChange={(date) => handleDateChange(date, 'endTime')}
+              showTimeSelect
+              dateFormat="MMMM d, yyyy h:mm aa"
+              minDate={formData.startTime}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label>Expected Attendees</label>
+            <input
+              type="number"
+              name="expectedAttendees"
+              value={formData.expectedAttendees}
+              onChange={handleChange}
+              placeholder="0"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Availability</label>
+            <button 
+              type="button" 
+              className="btn-secondary"
+              onClick={checkConflict}
+            >
+              Check Availability
+            </button>
+          </div>
         </div>
 
         <div className="form-group">
-          <label>End Date & Time *</label>
-          <DatePicker
-            selected={formData.endTime}
-            onChange={(date) => handleDateChange(date, 'endTime')}
-            showTimeSelect
-            dateFormat="MMMM d, yyyy h:mm aa"
-            minDate={formData.startTime}
+          <label>Purpose of Booking</label>
+          <textarea
+            name="purpose"
+            value={formData.purpose}
+            onChange={handleChange}
             required
+            rows="3"
+            placeholder="Briefly describe the event or meeting agenda..."
           />
         </div>
-      </div>
 
-      <button 
-        type="button" 
-        className="btn-secondary"
-        onClick={checkConflict}
-      >
-        Check Availability
-      </button>
-
-      <div className="form-group">
-        <label>Purpose *</label>
-        <textarea
-          name="purpose"
-          value={formData.purpose}
-          onChange={handleChange}
-          required
-          rows="3"
-          placeholder="What is this booking for?"
-        />
-      </div>
-
-      <div className="form-group">
-        <label>Expected Attendees</label>
-        <input
-          type="number"
-          name="expectedAttendees"
-          value={formData.expectedAttendees}
-          onChange={handleChange}
-          placeholder="Number of people"
-        />
-      </div>
-
-      <div className="form-actions">
-        <button
-          type="button"
-          className="btn-cancel"
-          onClick={() => {
-            if (typeof onCancel === 'function') {
-              onCancel();
-            } else {
-              navigate('/bookings');
-            }
-          }}
-        >
-          Cancel
-        </button>
-        <button type="submit" className="btn-submit" disabled={loading}>
-          {loading ? 'Creating...' : 'Create Booking'}
-        </button>
+        <div className="form-actions">
+          <button
+            type="button"
+            className="btn-cancel"
+            onClick={() => {
+              if (typeof onCancel === 'function') {
+                onCancel();
+              } else {
+                navigate('/bookings');
+              }
+            }}
+          >
+            Cancel
+          </button>
+          <button type="submit" className="btn-submit" disabled={loading}>
+            {loading ? 'Creating...' : 'Create Booking'}
+          </button>
+        </div>
       </div>
     </form>
   );

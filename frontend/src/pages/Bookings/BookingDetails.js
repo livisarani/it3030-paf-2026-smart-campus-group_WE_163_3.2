@@ -1,28 +1,24 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import {
 	FiArrowLeft,
 	FiCalendar,
 	FiCheckCircle,
 	FiClock,
-	FiFileText,
 	FiInfo,
 	FiMapPin,
-	FiPrinter,
 	FiUsers,
 	FiXCircle,
 } from 'react-icons/fi';
 import { bookingApi } from '../../api/bookingApi';
 import { useAuth } from '../../context/AuthContext';
 import { ROOMS } from '../../utils/constants';
-import BookingStatusBadge from './BookingStatusBadge';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorAlert from '../../components/common/ErrorAlert';
 
 const BookingDetails = () => {
 	const { id } = useParams();
 	const location = useLocation();
-	const navigate = useNavigate();
 	const { isAdmin } = useAuth();
 	const [booking, setBooking] = useState(null);
 	const [loading, setLoading] = useState(true);
@@ -86,12 +82,19 @@ const BookingDetails = () => {
 				})
 			: '-';
 
-	const printPage = () => {
-		window.print();
-	};
+	const formatDateTime = (value) =>
+		value
+			? new Date(value).toLocaleString(undefined, {
+				month: 'short',
+				day: '2-digit',
+				year: 'numeric',
+				hour: '2-digit',
+				minute: '2-digit',
+			})
+			: '';
 
 	const handleCancel = async () => {
-		if (!booking || booking.status !== 'APPROVED') return;
+		if (!booking || booking.status !== 'PENDING') return;
 		if (!window.confirm('Are you sure you want to cancel this booking?')) return;
 		const reason = window.prompt('Why are you cancelling this booking?');
 		if (reason === null) {
@@ -122,6 +125,14 @@ const BookingDetails = () => {
 
 	return (
 		<div className="booking-details-page booking-details-v2">
+			<nav className="booking-breadcrumb" aria-label="Breadcrumb">
+				<Link to="/rooms">Resources</Link>
+				<span aria-hidden="true">›</span>
+				<Link to="/bookings">Bookings</Link>
+				<span aria-hidden="true">›</span>
+				<span>#BK-{booking.id}</span>
+			</nav>
+
 			<div className="booking-details-top">
 				<div className="booking-details-top-left">
 					<Link to="/bookings" className="booking-back-link" aria-label="Back">
@@ -130,23 +141,8 @@ const BookingDetails = () => {
 					<div className="booking-details-title">
 						<div className="booking-title-row">
 							<h1>Booking Details</h1>
-							<BookingStatusBadge status={booking.status} />
 						</div>
-						<p className="booking-reference">
-							Reference: #BK-{booking.id}
-						</p>
 					</div>
-				</div>
-
-				<div className="booking-details-top-actions">
-					<button type="button" className="btn-print" onClick={printPage}>
-						<FiPrinter /> Print
-					</button>
-					{booking.status === 'APPROVED' && (
-						<button type="button" className="btn-cancel-booking" onClick={handleCancel}>
-							<FiXCircle /> Cancel Booking
-						</button>
-					)}
 				</div>
 			</div>
 
@@ -159,14 +155,6 @@ const BookingDetails = () => {
 							</h3>
 						</div>
 						<div className="general-info-grid">
-							<div className="general-info-item">
-								<span>Resource</span>
-								<strong>{booking.resourceName || '-'}</strong>
-							</div>
-							<div className="general-info-item">
-								<span>Purpose</span>
-								<strong>{booking.purpose || '-'}</strong>
-							</div>
 							<div className="general-info-item">
 								<span>
 									<FiCalendar /> Date
@@ -183,56 +171,97 @@ const BookingDetails = () => {
 							</div>
 							<div className="general-info-item">
 								<span>
-									<FiUsers /> Attendees
+									<FiUsers /> Participants
 								</span>
-								<strong>{booking.expectedAttendees || '-'} Participants</strong>
+								<strong>{booking.expectedAttendees || '-'} Students</strong>
+							</div>
+							<div className="general-info-item">
+								<span>Purpose</span>
+								<strong>{booking.purpose || '-'}</strong>
 							</div>
 						</div>
+
+						<div className="booking-description">
+							<p className="booking-description-title">Detailed Description</p>
+							<p className="booking-description-text">{booking.purpose || '—'}</p>
+						</div>
+					</section>
+
+					<section className="booking-lower-grid">
+						<aside className="booking-room-card" aria-label="Room preview">
+							<div className="booking-room-preview" aria-hidden="true" />
+							<div className="booking-room-name">{booking.resourceName || 'Campus Space'}</div>
+						</aside>
+
+						<aside className="booking-details-card booking-resource-card">
+							<div className="booking-resource-header">
+								<h3>
+									<FiMapPin /> Resource Details
+								</h3>
+								<span className="booking-resource-id">ID: RES-{booking.resourceId || '—'}</span>
+							</div>
+							<div className="details-kv">
+								<span>Location</span>
+								<strong>{room?.location || 'Main Campus'}</strong>
+							</div>
+							<div className="details-kv">
+								<span>Capacity</span>
+								<strong>Up to {room?.seats || room?.capacity || '-'} Persons</strong>
+							</div>
+							<div className="details-kv">
+								<span>Equipment</span>
+								<strong>{room?.features?.[0] || '—'}</strong>
+							</div>
+							<div className="details-kv">
+								<span>Network</span>
+								<strong>Campus Wi‑Fi</strong>
+							</div>
+						</aside>
 					</section>
 				</div>
 
 				<div className="booking-details-right">
-					<aside className="booking-details-card booking-resource-card">
-						<h3>Resource Details</h3>
-						<div className="room-preview" aria-hidden="true">
-							<span>ROOM VIEW</span>
-						</div>
-						<div className="details-kv">
-							<span>Location</span>
-							<strong>{room?.location || 'Main Campus'}</strong>
-						</div>
-						<div className="details-kv">
-							<span>Max Capacity</span>
-							<strong>{room?.seats || room?.capacity || '-'}</strong>
-						</div>
-						<div className="details-kv">
-							<span>Status</span>
-							<strong className="status-available">Available</strong>
-						</div>
-					</aside>
-
 					<section className="booking-details-card booking-workflow-card">
 						<h3>Workflow Status</h3>
 						<ul className="workflow-timeline">
-							<li className="done">
+							<li className="workflow-item done">
 								<div className="workflow-dot">
 									<FiCheckCircle />
 								</div>
 								<div>
 									<strong>Requested</strong>
-									<small>{booking.createdAt ? `Submitted ${formatDate(booking.createdAt)}` : ''}</small>
+									<small>
+										{booking.createdAt ? `BK-${booking.id} · ${formatDateTime(booking.createdAt)}` : `BK-${booking.id}`}
+										{booking.userName || booking.userEmail
+											? ` (initiated by ${booking.userName || booking.userEmail})`
+											: ''}
+									</small>
 								</div>
 							</li>
-							<li className={booking.status === 'PENDING' ? 'active' : 'done'}>
+							<li className={`workflow-item ${booking.status === 'PENDING' ? 'active' : 'done'}`}>
 								<div className="workflow-dot">
 									<FiCheckCircle />
 								</div>
 								<div>
 									<strong>Pending Review</strong>
-									<small>{booking.status !== 'PENDING' && booking.updatedAt ? `Completed ${formatDate(booking.updatedAt)}` : ''}</small>
+									<small>
+										{booking.status === 'PENDING'
+											? 'In Progress'
+											: booking.updatedAt
+												? `Completed ${formatDateTime(booking.updatedAt)}`
+												: ''}
+									</small>
 								</div>
 							</li>
-							<li className={booking.status === 'APPROVED' ? 'done' : booking.status === 'REJECTED' ? 'done rejected' : booking.status === 'CANCELLED' ? 'done cancelled' : ''}>
+							<li
+								className={`workflow-item ${
+									booking.status === 'APPROVED' || booking.status === 'REJECTED' || booking.status === 'CANCELLED'
+										? 'done'
+										: 'todo'
+								} ${booking.status === 'REJECTED' ? 'rejected' : ''} ${
+									booking.status === 'CANCELLED' ? 'cancelled' : ''
+								}`}
+							>
 								<div className="workflow-dot">
 									<FiCheckCircle />
 								</div>
@@ -244,11 +273,28 @@ const BookingDetails = () => {
 												? 'Cancelled'
 												: 'Approved'}
 									</strong>
-									<small>{booking.updatedAt ? `Confirmed ${formatDate(booking.updatedAt)}` : ''}</small>
+									<small>{booking.updatedAt ? `Scheduled Step · ${formatDateTime(booking.updatedAt)}` : ''}</small>
 								</div>
 							</li>
 						</ul>
 					</section>
+
+					{booking.status === 'REJECTED' || booking.status === 'CANCELLED' ? (
+						<section className="booking-reason-card" aria-label="Reason">
+							<h3>Reason</h3>
+							<p className="booking-reason-text">
+								{booking.status === 'REJECTED'
+									? booking.rejectionReason || '—'
+									: booking.cancelReason || '—'}
+							</p>
+						</section>
+					) : null}
+
+					{!isAdmin?.() && booking.status === 'PENDING' && (
+						<button type="button" className="btn-cancel-booking" onClick={handleCancel}>
+							<FiXCircle /> Cancel Booking
+						</button>
+					)}
 				</div>
 			</div>
 		</div>

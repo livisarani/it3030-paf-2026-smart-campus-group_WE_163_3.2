@@ -14,11 +14,13 @@ const Sidebar = () => {
 
 	return (
 		<aside className="sidebar">
-			<div>
-				<p className="sidebar-heading">Main Menu</p>
-
-				<nav className="sidebar-nav">
-					<NavLink to={isAdmin() ? '/admin/dashboard' : '/dashboard'} className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+			<div className="sidebar-top">
+				<nav className="sidebar-nav" aria-label="Sidebar">
+					<NavLink
+						to={isAdmin() ? '/admin/dashboard' : '/dashboard'}
+						className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+						end
+					>
 						<FiGrid />
 						<span>Dashboard</span>
 					</NavLink>
@@ -42,16 +44,26 @@ const Sidebar = () => {
 				</nav>
 			</div>
 
-			<div className="sidebar-footer">
-				<button type="button" className="sidebar-footer-link">
-					<FiSettings />
-					<span>Settings</span>
-				</button>
+			<div className="sidebar-bottom">
+				<div className="sidebar-status">
+					<p className="sidebar-status-title">Campus Status</p>
+					<div className="sidebar-status-row">
+						<span className="sidebar-status-dot" aria-hidden="true" />
+						<span>All systems optimal</span>
+					</div>
+				</div>
 
-				<button type="button" className="sidebar-footer-link" onClick={handleLogout}>
-					<FiLogOut />
-					<span>Logout</span>
-				</button>
+				<div className="sidebar-footer">
+					<button type="button" className="sidebar-footer-link">
+						<FiSettings />
+						<span>Settings</span>
+					</button>
+
+					<button type="button" className="sidebar-footer-link" onClick={handleLogout}>
+						<FiLogOut />
+						<span>Logout</span>
+					</button>
+				</div>
 			</div>
 		</aside>
 	);

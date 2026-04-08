@@ -17,6 +17,8 @@ public interface BookingService {
     BookingResponseDTO rejectBooking(Long bookingId, BookingActionDTO actionDTO, String adminEmail);
     
     BookingResponseDTO cancelBooking(Long bookingId, BookingActionDTO actionDTO, String userEmail);
+
+    void deleteBooking(Long bookingId, String adminEmail);
     
     List<BookingResponseDTO> getUserBookings(Long userId);
 

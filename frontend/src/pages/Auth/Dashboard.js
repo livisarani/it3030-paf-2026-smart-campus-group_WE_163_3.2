@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiClipboard, FiClock, FiCheckCircle } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
+import { FiClipboard, FiClock, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 import { bookingApi } from '../../api/bookingApi';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorAlert from '../../components/common/ErrorAlert';
@@ -31,18 +32,14 @@ const Dashboard = () => {
 		const total = bookings.length;
 		const pending = bookings.filter((booking) => booking.status === 'PENDING').length;
 		const approved = bookings.filter((booking) => booking.status === 'APPROVED').length;
-		return { total, pending, approved };
+		const rejected = bookings.filter((booking) => booking.status === 'REJECTED').length;
+		return { total, pending, approved, rejected };
 	}, [bookings]);
 
-	const trendPercent = (value) => (value === 0 ? '0%' : `${Math.min(99, Math.max(1, value))}%`);
-	const pendingTrend = stats.total ? Math.round((stats.pending / stats.total) * 100) : 0;
-	const approvedTrend = stats.total ? Math.round((stats.approved / stats.total) * 100) : 0;
-
-	const recentRequests = useMemo(() => {
+	const recentBookings = useMemo(() => {
 		const toTime = (value) => (value ? new Date(value).getTime() : 0);
 
 		return bookings
-			.filter((booking) => booking.status === 'PENDING')
 			.slice()
 			.sort(
 				(a, b) =>
@@ -55,16 +52,15 @@ const Dashboard = () => {
 
 	const formatDate = (dateString) =>
 		new Date(dateString).toLocaleDateString(undefined, {
-			year: 'numeric',
-			month: '2-digit',
+			month: 'short',
 			day: '2-digit',
+			year: 'numeric',
 		});
 
 	const formatTime = (dateString) =>
 		new Date(dateString).toLocaleTimeString(undefined, {
 			hour: '2-digit',
 			minute: '2-digit',
-			hour12: false,
 		});
 
 	if (loading) {
@@ -78,84 +74,79 @@ const Dashboard = () => {
 	return (
 		<div className="admin-dashboard">
 			<div className="dashboard-header">
-				<h1>Admin Approval Dashboard</h1>
-				<p>Manage campus resource requests and view system statistics.</p>
+				<h1>Admin Dashboard</h1>
+				<p>Monitor and manage space allocations across the campus ecosystem.</p>
 			</div>
 
-			<div className="stats-grid">
-				<article className="stat-card">
-					<div>
-						<p className="stat-label">Total Requests</p>
-						<div className="metric-row">
-							<h2>{stats.total}</h2>
-							<small className="trend-up">↑ {trendPercent(stats.total)}</small>
-						</div>
-					</div>
-					<div className="stat-icon icon-blue">
+			<div className="admin-kpi-grid">
+				<article className="admin-kpi-card">
+					<div className="admin-kpi-icon kpi-total" aria-hidden="true">
 						<FiClipboard />
 					</div>
+					<div className="admin-kpi-body">
+						<div className="admin-kpi-number">{stats.total}</div>
+						<div className="admin-kpi-label">Total Bookings</div>
+					</div>
 				</article>
 
-				<article className="stat-card">
-					<div>
-						<p className="stat-label">Pending Approvals</p>
-						<div className="metric-row">
-							<h2>{stats.pending}</h2>
-							<small className="trend-down">↓ {trendPercent(pendingTrend)}</small>
-						</div>
-					</div>
-					<div className="stat-icon icon-amber">
+				<article className="admin-kpi-card">
+					<div className="admin-kpi-icon kpi-pending" aria-hidden="true">
 						<FiClock />
 					</div>
+					<div className="admin-kpi-body">
+						<div className="admin-kpi-number">{stats.pending}</div>
+						<div className="admin-kpi-label">Pending Bookings</div>
+					</div>
 				</article>
 
-				<article className="stat-card">
-					<div>
-						<p className="stat-label">Approved Bookings</p>
-						<div className="metric-row">
-							<h2>{stats.approved}</h2>
-							<small className="trend-up">↑ {trendPercent(approvedTrend)}</small>
-						</div>
-					</div>
-					<div className="stat-icon icon-green">
+				<article className="admin-kpi-card">
+					<div className="admin-kpi-icon kpi-approved" aria-hidden="true">
 						<FiCheckCircle />
+					</div>
+					<div className="admin-kpi-body">
+						<div className="admin-kpi-number">{stats.approved}</div>
+						<div className="admin-kpi-label">Approved Bookings</div>
+					</div>
+				</article>
+
+				<article className="admin-kpi-card">
+					<div className="admin-kpi-icon kpi-rejected" aria-hidden="true">
+						<FiXCircle />
+					</div>
+					<div className="admin-kpi-body">
+						<div className="admin-kpi-number">{stats.rejected}</div>
+						<div className="admin-kpi-label">Rejected Bookings</div>
 					</div>
 				</article>
 			</div>
 
 			<section className="dashboard-requests-card">
 				<div className="requests-header">
-					<h3>Recent Requests</h3>
-					<span className="action-required-pill">{stats.pending} Action Required</span>
+					<h3>Recent Bookings</h3>
+					<Link className="recent-view-link" to="/bookings">
+						View All →
+					</Link>
 				</div>
 
-				<table className="requests-table">
+				<table className="requests-table user-recent-table">
 					<thead>
 						<tr>
-							<th>User</th>
-							<th>Resource</th>
-							<th>Date & Time</th>
-							<th>Purpose</th>
+							<th>Room</th>
+							<th>Date</th>
+							<th>Time</th>
+							<th>Booked By</th>
 							<th>Status</th>
 						</tr>
 					</thead>
 					<tbody>
-						{recentRequests.map((booking) => (
+						{recentBookings.map((booking) => (
 							<tr key={booking.id}>
+								<td>{booking.resourceName || '—'}</td>
+								<td>{formatDate(booking.startTime)}</td>
+								<td>
+									{formatTime(booking.startTime)} 1 {formatTime(booking.endTime)}
+								</td>
 								<td>{booking.userName || 'Campus User'}</td>
-								<td>
-									<strong>{booking.resourceName}</strong>
-									<br />
-									<small>{booking.expectedAttendees || 0} attendees</small>
-								</td>
-								<td>
-									{formatDate(booking.startTime)}
-									<br />
-									<small>
-										{formatTime(booking.startTime)} - {formatTime(booking.endTime)}
-									</small>
-								</td>
-								<td>{booking.purpose}</td>
 								<td>
 									<BookingStatusBadge status={booking.status} />
 								</td>

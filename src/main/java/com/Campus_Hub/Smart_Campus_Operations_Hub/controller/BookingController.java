@@ -114,6 +114,18 @@ public class BookingController {
     }
 
     /**
+     * Delete a processed booking request (Admin only)
+     * DELETE /api/bookings/{id}
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteBooking(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Email", defaultValue = "admin@campus.com") String adminEmail) {
+        bookingService.deleteBooking(id, adminEmail);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
      * Check if a time slot has conflicts
      * GET /api/bookings/check-conflict?resourceId=1&startTime=2024-01-01T10:00:00&endTime=2024-01-01T12:00:00
      */
