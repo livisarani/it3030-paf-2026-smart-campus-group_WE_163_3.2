@@ -1,47 +1,73 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import PrivateRoute from './components/PrivateRoute';
-import Layout from './components/Layout';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Layout from './components/layout/Layout';
+import PrivateRoute from './components/layout/PrivateRoute';
 
-// Auth pages
+// Pages
 import Login from './pages/Auth/Login';
 import Dashboard from './pages/Auth/Dashboard';
+import BookingList from './pages/Bookings/BookingList';
+import BookingForm from './pages/Bookings/BookingForm';
+import BookingApproval from './pages/Bookings/BookingApproval';
+import ResourceList from './pages/Resources/ResourceList';
+import BookingSuccess from './pages/Bookings/BookingSuccess';
+import BookingDetails from './pages/Bookings/BookingDetails';
 import Notifications from './pages/Auth/Notifications';
-
-// Ticket pages (Member 3)
 import TicketList from './pages/Tickets/TicketList';
 import TicketForm from './pages/Tickets/TicketForm';
 import TicketDetails from './pages/Tickets/TicketDetails';
 import MyTickets from './pages/Tickets/MyTickets';
 
-const App = () => (
-  <AuthProvider>
-    <BrowserRouter>
-      <Routes>
-        {/* Public */}
-        <Route path="/login" element={<Login />} />
+function AppRoutes() {
+  const { isAdmin } = useAuth();
 
-        {/* Protected – wrapped in Layout (Navbar + main container) */}
-        <Route element={<PrivateRoute><Layout /></PrivateRoute>}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard"      element={<Dashboard />} />
-          <Route path="/notifications"  element={<Notifications />} />
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route element={<PrivateRoute />}>
+        <Route element={<Layout />}>
+          <Route path="/" element={<Navigate to={isAdmin ? '/admin/dashboard' : '/bookings'} replace />} />
+          <Route
+            path="/dashboard"
+            element={isAdmin ? <Navigate to="/admin/dashboard" replace /> : <Navigate to="/bookings" replace />}
+          />
+          <Route
+            path="/admin/dashboard"
+            element={isAdmin ? <Dashboard /> : <Navigate to="/bookings" replace />}
+          />
+          <Route path="/bookings" element={<BookingList />} />
+          <Route path="/bookings/new" element={<BookingForm />} />
+          <Route path="/bookings/:id" element={<BookingDetails />} />
+          <Route path="/rooms" element={isAdmin ? <ResourceList /> : <Navigate to="/bookings" replace />} />
+          <Route path="/bookings/success" element={<BookingSuccess />} />
+          <Route
+            path="/admin/bookings"
+            element={isAdmin ? <BookingApproval /> : <Navigate to="/bookings" replace />}
+          />
 
-          {/* Ticket Module (Member 3) */}
-          <Route path="/tickets"            element={<TicketList />} />
-          <Route path="/tickets/new"        element={<TicketForm />} />
-          <Route path="/tickets/my"         element={<MyTickets />} />
-          <Route path="/tickets/:id"        element={<TicketDetails />} />
-          <Route path="/tickets/:id/edit"   element={<TicketForm />} />
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/tickets" element={<TicketList />} />
+          <Route path="/tickets/new" element={<TicketForm />} />
+          <Route path="/tickets/my" element={<MyTickets />} />
+          <Route path="/tickets/:id" element={<TicketDetails />} />
+          <Route path="/tickets/:id/edit" element={<TicketForm />} />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
+      </Route>
+    </Routes>
+  );
+}
 
-        {/* Catch-all */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-    </BrowserRouter>
-  </AuthProvider>
-);
+function App() {
+  return (
+    <AuthProvider>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AppRoutes />
+      </Router>
+    </AuthProvider>
+  );
+}
 
 export default App;
-

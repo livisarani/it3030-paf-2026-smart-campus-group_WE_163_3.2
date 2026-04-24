@@ -51,27 +51,25 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(Customizer.withDefaults())                          // ← honour WebConfig CORS rules
+            .cors(Customizer.withDefaults())
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .headers(h -> h.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)) // H2 console
-            .exceptionHandling(ex -> ex
-                // Return 401 JSON (not 403) when the request is not authenticated
-                .authenticationEntryPoint((request, response, authException) -> {
-                    response.setContentType("application/json");
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.getWriter().write(
-                        "{\"error\":\"Unauthorized\",\"message\":\"" + authException.getMessage() + "\"}");
-                })
-            )
+            .headers(h -> h.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
+            .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authException) -> {
+                response.setContentType("application/json");
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write(
+                    "{\"error\":\"Unauthorized\",\"message\":\"" + authException.getMessage() + "\"}");
+            }))
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints
+                .requestMatchers("/", "/health").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/bookings/**").permitAll()
+                .requestMatchers("/api/resources/**").permitAll()
+                .requestMatchers("/api/notifications/**").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/api/tickets/attachments/**").permitAll()
-                // Swagger/docs (if added later)
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**").permitAll()
-                // All other endpoints require authentication
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
@@ -80,4 +78,3 @@ public class SecurityConfig {
         return http.build();
     }
 }
-

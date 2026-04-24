@@ -57,8 +57,11 @@ build/
 # ===== VS Code =====
 .vscode/
 
+# ===== Node Modules =====
+node_modules/
+**/node_modules/
+
 # ===== React / Node =====
-frontend/node_modules/
 frontend/.env
 frontend/.env.local
 frontend/.env.development.local

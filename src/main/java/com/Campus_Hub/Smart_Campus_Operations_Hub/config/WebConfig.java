@@ -18,7 +18,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOrigins("http://localhost:3000", "http://localhost:3001")
+                .allowedOriginPatterns("http://localhost:*", "http://127.0.0.1:*")
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .exposedHeaders("Authorization")
@@ -28,11 +28,9 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Serve uploaded ticket images from the filesystem
         Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
-        String resourceLocation = "file:" + uploadPath.toString() + "/";
+        String resourceLocation = "file:" + uploadPath + "/";
         registry.addResourceHandler("/api/tickets/attachments/**")
                 .addResourceLocations(resourceLocation);
     }
 }
-
