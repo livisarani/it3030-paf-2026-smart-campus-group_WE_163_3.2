@@ -3,6 +3,7 @@ package com.Campus_Hub.Smart_Campus_Operations_Hub.exception;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
@@ -24,6 +26,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     record ErrorResponse(int status, String error, String message, LocalDateTime timestamp) {}
@@ -131,8 +134,28 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(409, "Conflict", ex.getMessage(), LocalDateTime.now()));
     }
 
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<Map<String, Object>> handleHandlerMethodValidation(HandlerMethodValidationException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getAllValidationResults().forEach(result ->
+            result.getResolvableErrors().forEach(err -> {
+                String field = result.getMethodParameter().getParameterName();
+                if (field == null) field = result.getMethodParameter().getParameterType().getSimpleName();
+                errors.put(field, err.getDefaultMessage());
+            })
+        );
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", 400);
+        response.put("error", "Validation Failed");
+        response.put("errors", errors);
+        response.put("message", "One or more fields failed validation. See 'errors' for details.");
+        response.put("timestamp", LocalDateTime.now());
+        return ResponseEntity.badRequest().body(response);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneral(Exception ex) {
+        log.error("Unhandled exception: {}", ex.getMessage(), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorResponse(500, "Internal Server Error", "An unexpected error occurred", LocalDateTime.now()));
     }

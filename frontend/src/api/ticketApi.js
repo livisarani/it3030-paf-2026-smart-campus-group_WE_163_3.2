@@ -24,7 +24,7 @@ export const createTicket = (ticketData, imageFiles) => {
   if (imageFiles) {
     Array.from(imageFiles).forEach(f => form.append('images', f));
   }
-  return client.post(BASE, form).then(r => r.data);
+  return client.post(BASE, form, { headers: { 'Content-Type': undefined } }).then(r => r.data);
 };
 
 // PUT update ticket (multipart/form-data)
@@ -34,7 +34,7 @@ export const updateTicket = (id, ticketData, imageFiles) => {
   if (imageFiles) {
     Array.from(imageFiles).forEach(f => form.append('images', f));
   }
-  return client.put(`${BASE}/${id}`, form).then(r => r.data);
+  return client.put(`${BASE}/${id}`, form, { headers: { 'Content-Type': undefined } }).then(r => r.data);
 };
 
 // DELETE ticket

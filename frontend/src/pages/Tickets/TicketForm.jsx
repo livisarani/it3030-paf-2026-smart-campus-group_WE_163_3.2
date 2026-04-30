@@ -164,7 +164,13 @@ const TicketForm = () => {
 
     setSubmitting(true);
     setServerError('');
-    const payload = { ...form, resourceId: form.resourceId || null };
+    const payload = {
+      ...form,
+      resourceId: form.resourceId || null,
+      contactName: form.contactName?.trim() || null,
+      contactEmail: form.contactEmail?.trim() || null,
+      contactPhone: form.contactPhone?.trim() || null,
+    };
     try {
       if (isEdit) {
         await updateTicket(id, payload, newFiles.length > 0 ? newFiles : null);
